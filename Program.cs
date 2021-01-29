@@ -16,14 +16,17 @@ namespace HWMonitor_Server
     {
         static void Main(string[] args)
         {
-            HWMonitor hwmonitor = new HWMonitor(6);
-            while (true)
-            {
-                Console.WriteLine(hwmonitor.GetDynamicInfo());
-                Console.WriteLine("==========================\n");
-                System.Threading.Thread.Sleep(5000);
-            }
-            // Console.ReadLine();
+            //HWMonitor hwmonitor = new HWMonitor();
+            //Console.WriteLine(hwmonitor.GetStaticInfo());
+            //for (int i = 0; i < 1000; i++)
+            //{
+            //    Console.WriteLine(hwmonitor.GetDynamicInfo());
+            //    Console.WriteLine("==========================\n");
+            //    System.Threading.Thread.Sleep(1000);
+            //}
+            Server server = new Server();
+            server.start();
+            Console.ReadLine();
         }
 
         static void Handle(IHardware hardwareItem)

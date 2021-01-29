@@ -7,17 +7,17 @@ cputhermometer_sensortypes = ['Voltage','Clock','Temperature','Load','Fan','Flow
 
 
 def initialize_openhardwaremonitor():
-    file = 'E:\Projects\hw-monitor-server\OpenHardwareMonitorLib.dll'
+    file = 'E:\Projects\hw-monitor-server\OpenHardwareMonitorLib'
     clr.AddReference(file)
 
     from OpenHardwareMonitor import Hardware
 
     handle = Hardware.Computer()
-    handle.MainboardEnabled = True
+    # handle.MainboardEnabled = True
     handle.CPUEnabled = True
-    handle.RAMEnabled = True
-    handle.GPUEnabled = True
-    handle.HDDEnabled = True
+    # handle.RAMEnabled = True
+    # handle.GPUEnabled = True
+    # handle.HDDEnabled = True
     handle.Open()
     return handle
 

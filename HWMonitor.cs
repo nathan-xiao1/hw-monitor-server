@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using OpenHardwareMonitor.Hardware;
+using Microsoft.VisualBasic.Devices;
+using Computer = OpenHardwareMonitor.Hardware.Computer;
 
 namespace HW_Monitor_Server
 {
@@ -17,25 +19,19 @@ namespace HW_Monitor_Server
 
         [JsonProperty]
         private float[] cpu_usages;
-        [JsonProperty]
+        [JsonProperty(PropertyName = "cpu_temps")]
         private float[] cpu_temperatures;
 
         [JsonProperty]
-        private float memory_available;
-        private long memory_total = 1900000;
+        private long memory_available;
+        private long memory_total;
 
         [JsonProperty]
         private float[] drive_usages;
         private DriveInfo[] drives;
 
-        public HWMonitor(int cpu_count)
+        public HWMonitor()
         {
-            this.cpu_count = cpu_count;
-            this.cpu_usages = new float[cpu_count + 1];
-            this.cpu_temperatures = new float[cpu_count + 1];
-            this.memory_available = 0;
-            this.drives = DriveInfo.GetDrives();
-            this.drive_usages = new float[drives.Length];
             this.computer = new Computer
             {
                 CPUEnabled = true,
@@ -43,6 +39,12 @@ namespace HW_Monitor_Server
                 RAMEnabled = true
             };
             computer.Open();
+            this.cpu_count = _GetCPUCount();
+            this.cpu_usages = new float[cpu_count];
+            this.cpu_temperatures = new float[cpu_count];
+            this.memory_total = (long) new ComputerInfo().TotalPhysicalMemory;
+            this.drives = DriveInfo.GetDrives();
+            this.drive_usages = new float[drives.Length];
         }
 
         public string GetStaticInfo()
@@ -56,7 +58,7 @@ namespace HW_Monitor_Server
             }
             return JsonConvert.SerializeObject(new
             {
-                cpu_count = cpu_count,
+                cpu_count = cpu_count - 1, // Minus one for CPU package
                 memory_total = memory_total,
                 disk_partitions = disk_partitions
             });
@@ -64,7 +66,7 @@ namespace HW_Monitor_Server
 
         public string GetDynamicInfo()
         {
-            // Get info from OpenHardwareMonitor
+            // Get data from OpenHardwareMonitor
             foreach (var hardwareItem in computer.Hardware)
             {
                 hardwareItem.Update();
@@ -78,18 +80,30 @@ namespace HW_Monitor_Server
                     case HardwareType.CPU:
                         _UpdateCPU(hardwareItem);
                         break;
-                    case HardwareType.RAM:
-                        _UpdateRAM(hardwareItem);
-                        break;
-                    case HardwareType.HDD:
-                        break;
                 }
             }
 
-            // Update drive info
+            // Update using data from Windows
+            _UpdateRAM();
             _UpdateDrives();
 
             return GetAsJSON();
+        }
+
+        private int _GetCPUCount()
+        {
+            int cpu_count = 0;
+            Computer computer = new Computer
+            {
+                CPUEnabled = true
+            };
+            computer.Open();
+            foreach (var hardwareItem in computer.Hardware)
+            {
+                foreach (var sensor in hardwareItem.Sensors)
+                    if (sensor.SensorType == SensorType.Load) cpu_count++;
+            }
+            return cpu_count;
         }
 
         private void _UpdateCPU(IHardware hardwareItem)
@@ -108,16 +122,9 @@ namespace HW_Monitor_Server
             }
         }
 
-        private void _UpdateRAM(IHardware hardwareItem)
+        private void _UpdateRAM()
         {
-            if (hardwareItem.HardwareType != HardwareType.RAM) return;
-            foreach (var sensor in hardwareItem.Sensors)
-            {
-                if (sensor.SensorType == SensorType.Data && sensor.Name == "Available Memory")
-                {
-                    memory_available = sensor.Value ?? memory_available;
-                }
-            }
+            memory_available = (long) new ComputerInfo().AvailablePhysicalMemory;
         }
 
         private void _UpdateDrives()
